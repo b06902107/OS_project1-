@@ -14,6 +14,26 @@
 int RR_time_last;
 int now_time;
 
+typedef struct queue{
+	int que[100];
+	int start;
+	int end;
+}Queue;
+
+Queue q;
+
+int nextQ(){
+	if(q.start == q.end)
+		return -1;
+	return q.que[q.start]; 	
+}
+
+int addQ(int a){
+	q.que[q.end] = a;
+	q.end = q.end + 1;
+	return 0;
+} 
+
 typedef struct process {
 	char name[32];
 	int t_ready;
@@ -107,24 +127,13 @@ int choose_next_process(Process *proc, int process_num, int policy, int running)
 	}
 	else if(policy == 1){
 		if(running == -1){
-			for(int i=0 ; i<process_num ; i++){
-				if(proc[i].pid != -1 && proc[i].t_exec > 0){
-					ret = i;
-					break;
-				}
-			}
+			ret = nextQ();
+			q.start = (q.start + 1) % 100;
 		}
 		else if((now_time - RR_time_last) % 500 == 0){
-			if(running != (process_num-1))
-				ret = running + 1;
-			else
-				ret = 0;
-			while(proc[ret].pid == -1 || proc[ret].t_exec == 0){
-				if(ret != (process_num-1))
-					ret = ret + 1;
-				else
-					ret = 0;
-			}
+			addQ(running);
+			ret = nextQ();
+			q.start = (q.start + 1) % 100;
 		}
 		else{
 			ret == running;
@@ -189,6 +198,7 @@ void scheduling(Process *proc, int process_num, int policy){
 			if(proc[i].t_ready == now_time){
 				proc[i].pid = proc_exec(proc[i]);
 				proc_block(proc[i].pid);
+				addQ(i);
 			}
 		}
 
@@ -210,6 +220,9 @@ void scheduling(Process *proc, int process_num, int policy){
 }
 
 int main(int argc, char *argv[]){
+	
+	q.start = 0;
+	q.end = 0;
 
 	char policy_c[256];
 	int policy;
@@ -217,12 +230,14 @@ int main(int argc, char *argv[]){
 
 	scanf("%s", policy_c);
 	scanf("%d", &process_num);
+	//printf("fuck ");
 
 	Process proc[process_num];
 	for(int i=0 ; i<process_num ; i++){
 		scanf("%s %d %d", proc[i].name, &proc[i].t_ready, &proc[i].t_exec);
 		proc[i].pid = -1;
 	}
+	//printf("fuck\n");
 
 	if(strcmp(policy_c, "FIFO") == 0)
 		policy = 0;
@@ -232,8 +247,9 @@ int main(int argc, char *argv[]){
 		policy = 2;
 	else if(strcmp(policy_c, "PSJF") == 0)
 		policy = 3;
-
+	//printf("test\n");
 	scheduling(proc, process_num, policy);
+	//printf("test2\n");
 
 	exit(0);
 }
